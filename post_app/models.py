@@ -13,6 +13,7 @@ from post_app.services import get_or_none
 
 
 class Post(models.Model):
+    """Post created by user"""
     title = models.CharField(max_length=255)
     text = models.TextField()
     created_by = models.ForeignKey('User', on_delete=models.CASCADE, db_index=True)
@@ -36,18 +37,24 @@ class Post(models.Model):
 
 
 class Like(models.Model):
+    """Storing user like for post"""
     user = models.ForeignKey('User', on_delete=models.CASCADE, db_index=True)
     post = models.ForeignKey('Post', on_delete=models.CASCADE, db_index=True)
     made_at_time = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('user', 'post')
+    @classmethod
+    def made_at_time_range(cls, date_from, date_to):
+        return Like.objects.filter(made_at_time__range=(date_from, date_to)).count()
 
     def __str__(self):
         return self.user.username
 
+    class Meta:
+        unique_together = ('user', 'post')
+
 
 class UserManager(BaseUserManager):
+    """Creating default user and superuser"""
     def create_user(self, username, email, password=None):
         if username is None:
             raise TypeError('Users must have a username')
@@ -74,6 +81,12 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    """
+    Last_request field is updated
+    every time when user makes request to the server (detected via UpdateUserMiddleware)
+
+    We are not creating last_login field since it is already inherited from django
+    """
     username = models.CharField(db_index=True, max_length=255, unique=True)
     email = models.EmailField(db_index=True, unique=True)
     is_active = models.BooleanField(default=True)
